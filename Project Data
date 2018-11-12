@@ -1,0 +1,30 @@
+#Load packages
+library(gmapsdistance)
+library(stringr)
+
+#Setting the API key:
+set.api.key("AIzaSyB_etMYR_HyqgrnDSlqQMm417935SB9QAA")
+
+#Import states and addresses for all parks
+address_data = read.csv("/Users/katherineshockey/Google Drive/ISA 321/ISA 321 Project - Addresses.csv")
+
+#Prepare data for gmapsdistance function
+#Replace all spaces with "+" for cities
+address_data$City_plus <- str_replace_all(address_data$City, " ", "+")
+
+#Add "+" to end of all city strings
+address_data$City_plus <- paste0(address_data$City_plus, "+")
+
+#Replace all spaces with "+" for states
+address_data$State_plus <- str_replace_all(address_data$State, " ", "+")
+
+#Add combined variable of city and state
+address_data$Address_Total <- paste0(address_data$City_plus, address_data$State_plus)
+
+#Package knowledge comes from:
+#https://github.com/rodazuero/gmapsdistance
+
+results = gmapsdistance(origin = address_data$Address_Total, 
+                        destination = address_data$Address_Total, 
+                        mode = "driving")
+results
