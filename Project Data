@@ -24,7 +24,12 @@ address_data$Address_Total <- paste0(address_data$City_plus, address_data$State_
 #Package knowledge comes from:
 #https://github.com/rodazuero/gmapsdistance
 
-results = gmapsdistance(origin = address_data$Address_Total, 
-                        destination = address_data$Address_Total, 
+#Convert addresses to a list
+addresses <- as.list(address_data$Address_Total)
+
+#Run gmapsdistance for the combination of all parks
+results = gmapsdistance(origin = addresses, 
+                        destination = addresses, 
                         mode = "driving")
-results
+
+
