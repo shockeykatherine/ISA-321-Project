@@ -3,6 +3,7 @@ library(gmapsdistance)
 library(stringr)
 library(dplyr)
 library(measurements)
+library(ggplot2)
 
 #Setting the API key:
 set.api.key("AIzaSyB_etMYR_HyqgrnDSlqQMm417935SB9QAA")
@@ -22,6 +23,7 @@ address_data$State_plus <- str_replace_all(address_data$State, " ", "+")
 
 #Add combined variable of city and state
 address_data$Address_Total <- paste0(address_data$City_plus, address_data$State_plus)
+address_data$Address_Total_Clean <- paste0(address_data$City, " ", address_data$State)
 
 #Package knowledge comes from:
 #https://github.com/rodazuero/gmapsdistance
@@ -39,4 +41,29 @@ results_df <- results[["Distance"]]
 
 #Need to convert to miles
 results_df[,-1] <- conv_unit(results_df[,-1], from = "m", to = "mi")
+
+#EDA
+#Count number of national parks by state
+states <- address_data %>% 
+  select(State) %>% 
+  group_by(State) %>% 
+  summarise(n=n())
+
+#Bar chart for number of parks by state
+ggplot(data=states, aes(x=State, y=n)) +
+  geom_bar(stat="identity", fill="steelblue") +
+  labs(y="Number of Parks", title="Number of National Parks by State in the U.S.") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+#Rename columns and first row of distances matrix
+colnames(results_df) <- str_sub(colnames(results_df), 10)
+colnames(results_df) <- gsub("\\+", " ", colnames(results_df)) 
+colnames(results_df)[1] <- "or"
+results_df[,1] <- gsub("\\+", " ", results_df[,1]) 
+
+#Merge the park name/address data with distances data
+results_distances  <- merge(address_data, results_df, by.x = "Address_Total_Clean", by.y = "or")
+
+save(results_distances, file = "ISA321_project_data.RData")
 
