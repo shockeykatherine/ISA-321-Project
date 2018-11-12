@@ -4,6 +4,7 @@ library(stringr)
 library(dplyr)
 library(measurements)
 library(ggplot2)
+library(kableExtra)
 
 #Setting the API key:
 set.api.key("AIzaSyB_etMYR_HyqgrnDSlqQMm417935SB9QAA")
@@ -65,5 +66,28 @@ results_df[,1] <- gsub("\\+", " ", results_df[,1])
 #Merge the park name/address data with distances data
 results_distances  <- merge(address_data, results_df, by.x = "Address_Total_Clean", by.y = "or")
 
+#Save distances data to an RData file
 save(results_distances, file = "ISA321_project_data.RData")
+
+#Select the numeric variables
+parks_distances <- results_distances %>% 
+  select(8:61) 
+
+#User numeric variables to calcuale mean, med, max, and sd of distances
+parks_distances$mean <- round(rowMeans(parks_distances, na.rm=TRUE),digits = 0)
+parks_distances$median <- round(apply(parks_distances, 1, function(x) { median(x, na.rm=TRUE) }),0)
+parks_distances$max <- round(apply(parks_distances, 1, function(x) { max(x, na.rm=TRUE) }),0)
+parks_distances$sd <- round(apply(parks_distances, 1, function(x) { sd(x, na.rm=TRUE) }),0)
+
+#Combine park names back with numeric variables
+Park_Summary <- cbind(results_distances$Park, parks_distances) %>% 
+  filter(!is.na(`Bar Harbor Maine`))
+
+#Create a summary statistics kable
+Park_Summary %>% 
+select(1, 56:59) %>%
+`colnames<-`(c("Park", "Maximum", "Mean", "Median", "Standard Deviation")) %>% 
+kable(digits=0, caption="Summary Statistics for Distances Between Parks in Miles") %>%
+kable_styling(full_width=FALSE)
+
 
