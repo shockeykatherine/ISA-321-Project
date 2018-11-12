@@ -1,6 +1,8 @@
 #Load packages
 library(gmapsdistance)
 library(stringr)
+library(dplyr)
+library(measurements)
 
 #Setting the API key:
 set.api.key("AIzaSyB_etMYR_HyqgrnDSlqQMm417935SB9QAA")
@@ -32,4 +34,9 @@ results = gmapsdistance(origin = addresses,
                         destination = addresses, 
                         mode = "driving")
 
+#Make a df of the distances matrix
+results_df <- results[["Distance"]]
+
+#Need to convert to miles
+results_df[,-1] <- conv_unit(results_df[,-1], from = "m", to = "mi")
 
