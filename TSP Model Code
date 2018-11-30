@@ -1,0 +1,20 @@
+library(TSP)
+
+
+setwd("~/Documents/Fall 2018/ISA 321")
+data <- read.csv("ISA321ProjectData.csv")
+
+row.names(data)<- data[,1]
+data <- data[,-1]
+tsp <- as.dist(data)
+data <- as.TSP(tsp)
+tsp <- insert_dummy(data, label = "cut")
+tour <- solve_TSP(tsp, method = "nearest_insertion")
+tour
+path <- cut_tour(tour, "cut")
+path
+head(path)
+#####################################################
+path_tsp <- as.data.frame(path)
+write.csv(path_tsp, file="National_parks_TSP.csv")
+
