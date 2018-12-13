@@ -1,0 +1,418 @@
+library(dplyr)
+library(purrr)
+library(ggmap)
+library(gmapsdistance)
+library(measurements)
+library(TSP)
+
+#Setting the API key:
+set.api.key("AIzaSyB_etMYR_HyqgrnDSlqQMm417935SB9QAA")
+
+ne_cities <- c("Bar+Harbor+ME", 
+                "Luray+VA")
+
+se_cities <- c("Hopkins+SC",
+               "Gatlinburg+TN",
+               "Homestead+FL",
+               "Homestead+FL")
+  
+mw_cities <- c("Hot+Springs+AR",
+               "Houghton+MI",
+               "International+Falls+MN",
+               "Medora+ND",
+               "Brecksville+OH",
+               "Interior+SD",
+               "Hot+Springs+SD")
+
+im_cities <- c("West+Glacier+MT",
+               "West+Yellowstone+MT",
+               "Moose+WY",
+               "Bryce+UT",
+               "Springdale+UT",
+               "Torrey+UT",
+               "Moab+UT",
+               "Estes+Park+CO",
+               "Gunnison+CO",
+               "Mosca+CO",
+               "Mesa+Verde+CO",
+               "Big+Bend+National+Park+TX",
+               "Salt+Flat+TX",
+               "Carlsbad+NM",
+               "Tucson+AZ",
+               "Petrified+Forest+AZ",
+               "Grand+Canyon+AZ")
+
+pw_cities <- c("Ventura+CA",
+               "Death+Valley+CA",
+               "Twentynine+Palms+CA",
+               "Mineral+CA",
+               "Paicines+CA",
+               "Crescent+City+CA",
+               "Three+Rivers+CA",
+               "Mariposa+CA",
+               "Baker+NV",
+               "Crater+Lake+OR",
+               "Ashford+WA",
+               "Sedro-Woolley+WA",
+               "Port+Angeles+WA")
+
+im_distances <- gmapsdistance(origin = im_cities,
+                           destination = im_cities,
+                           combinations = "all",
+                           mode = "driving")$Distance[, -1]
+
+ne_distances <- gmapsdistance(origin = ne_cities,
+                              destination = ne_cities,
+                              combinations = "all",
+                              mode = "driving")$Distance[, -1]
+
+se_distances <- gmapsdistance(origin = se_cities,
+                              destination = se_cities,
+                              combinations = "all",
+                              mode = "driving")$Distance[, -1]
+
+pw_distances <- gmapsdistance(origin = pw_cities,
+                              destination = pw_cities,
+                              combinations = "all",
+                              mode = "driving")$Distance[, -1]
+
+mw_distances <- gmapsdistance(origin = mw_cities,
+                              destination = mw_cities,
+                              combinations = "all",
+                              mode = "driving")$Distance[, -1]
+
+# Scale to km.
+ne_distances <- as.matrix(ne_distances)
+
+#Need to convert to miles
+ne_distances <- conv_unit(ne_distances, from = "m", to = "mi")
+se_distances <- conv_unit(se_distances, from = "m", to = "mi")
+im_distances <- conv_unit(im_distances, from = "m", to = "mi")
+mw_distances <- conv_unit(mw_distances, from = "m", to = "mi")
+pw_distances <- conv_unit(pw_distances, from = "m", to = "mi")
+
+# Convert to distance matrix.
+#
+im_distances <- as.dist(im_distances)
+ne_distances <- as.dist(ne_distances)
+se_distances <- as.dist(se_distances)
+mw_distances <- as.dist(mw_distances)
+pw_distances <- as.dist(pw_distances)
+
+# TRAVELLING SALESMAN -------------------------------------------------------------------------------------------------
+
+###NE###
+ne_tsp <- TSP(ne_distances)
+
+methods <- c(
+  "nearest_insertion",
+  "farthest_insertion",
+  "cheapest_insertion",
+  "arbitrary_insertion",
+  "nn",
+  "repetitive_nn",
+  "two_opt"
+)
+
+ne_tours <- methods %>% map(function(method) {
+  solve_TSP(ne_tsp, method)
+})
+
+ne_tour <- solve_TSP(ne_tsp)
+#
+# Order of locations in tour.
+#
+ne_tour_order <- as.integer(ne_tour)
+ne_tour_order
+
+
+###SE###
+se_tsp <- TSP(se_distances)
+
+se_tours <- methods %>% map(function(method) {
+  solve_TSP(se_tsp, method)
+})
+
+se_tour <- solve_TSP(se_tsp)
+#
+# Order of locations in tour.
+#
+se_tour_order <- as.integer(se_tour)
+se_tour_order
+
+
+###MW###
+mw_tsp <- TSP(mw_distances)
+
+mw_tours <- methods %>% map(function(method) {
+  solve_TSP(mw_tsp, method)
+})
+
+mw_tour <- solve_TSP(mw_tsp)
+#
+# Order of locations in tour.
+#
+mw_tour_order <- as.integer(mw_tour)
+mw_tour_order
+
+
+###IM###
+im_tsp <- TSP(im_distances)
+
+im_tours <- methods %>% map(function(method) {
+  solve_TSP(im_tsp, method)
+})
+
+im_tour <- solve_TSP(im_tsp)
+#
+# Order of locations in tour.
+#
+im_tour_order <- as.integer(im_tour)
+im_tour_order
+
+
+###PW###
+pw_tsp <- TSP(pw_distances)
+
+pw_tours <- methods %>% map(function(method) {
+  solve_TSP(pw_tsp, method)
+})
+
+pw_tour <- solve_TSP(pw_tsp)
+#
+# Order of locations in tour.
+#
+pw_tour_order <- as.integer(pw_tour)
+pw_tour_order
+
+
+####Reorder based on tour orders####
+
+####NE####
+ne_cities_df <- as.data.frame(ne_cities)
+ne_cities_df <- ne_cities_df[ne_tour_order,]
+ne_cities_df <- as.data.frame(ne_cities)
+colnames(ne_cities_df) <- "address_total"
+ne_cities_df$lat <- c(44.35, 38.53)
+ne_cities_df$lon <- c(-68.21, -78.35)
+ne_cities_df$label <- c("Acadia National Park", "Shenandoah National Park")
+
+
+####IM####
+im_cities_df <- data.frame(im_cities)
+im_cities_df$rownum <- c(seq(from = 1, to = 17, by = 1))
+im_cities_df <- im_cities_df[match(im_tour_order, im_cities_df$rownum),]
+im_cities_df$lat <- c(29.1275, 32.1479,
+                      37.7916, 38.5754,
+                      40.3428, 43.7904,
+                      44.4280, 48.7596,
+                      37.2982, 37.5930,
+                      38.3670, 38.3269,
+                      37.2309, 36.1070,
+                      34.9100, 32.2967,
+                      31.9452)
+im_cities_df$lon <- c(-103.2425, -104.5567,
+                       -105.5943, -107.7416,
+                       -105.6836, -110.6818,
+                       -110.5885, -113.7870,
+                       -113.0263, -112.1871,
+                       -111.2615, -109.8783,
+                       -108.4618, -112.1130,
+                       -109.8068, -111.1666,
+                       -104.8725)
+im_cities_df$label <- c("Big Bend National Park", "Carlsbad National Park",
+                        "Great Sand Dunes National Park", "Black Canyon of the Gunnison National Park",
+                        "Rocky Mountain National Park", "Grand Teton National Park", 
+                        "Yellowstone National Park", "Glacier National Park",
+                        "Zion National Park", "Bryce Canyon National Park",
+                        "Capitol Reef National Park", "Canyonlands National Park",
+                        "Mesa Verde National Park", "Grand Canyon National Park",
+                        "Petrified Forest National Park", "Saguaro National Park",
+                        "Guadalupe Mountains National Park")
+im_cities_df$label2 <- c("1", "2",
+                        "3", "4",
+                        "5", "6", 
+                        "7", "8",
+                        "9", "10",
+                        "11", "12",
+                        "13", "14",
+                        "15", "16",
+                        "17")
+
+####SE####
+se_cities_df <- data.frame(se_cities)
+se_cities_df$rownum <- c(seq(from = 1, to = 4, by = 1))
+se_cities_df <- se_cities_df[match(se_tour_order, se_cities_df$rownum),]
+se_cities_df$label2 <- c("1 - Dry Tortugas National Park / 2 - Everglades National Park",
+                         "3 - Congaree National Park", 
+                         "4 - Great Smoky Mountains National Park")
+se_cities_df$lat <- c(25.4687, 33.9043, 35.7143)
+se_cities_df$lon <- c(-80.4776, -80.8770, -83.5102)
+
+
+####PW####
+pw_cities_df <- data.frame(pw_cities)
+pw_cities_df$rownum <- c(seq(from = 1, to = 13, by = 1))
+pw_cities_df <- pw_cities_df[match(pw_tour_order, pw_cities_df$rownum),]
+pw_cities_df$label2 <- c("1", "2",
+                         "3", "4",
+                         "5", "6",
+                         "7", "8",
+                         "9", "10",
+                         "11", "12",
+                         "13")
+pw_cities_df$lat <- c(37.4849, 36.4388,
+                      36.7289, 40.3477,
+                      41.7558, 46.7584,
+                      48.5039, 48.1181,
+                      42.8684, 39.0121,
+                      36.5323, 34.1356,
+                      34.2805)
+pw_cities_df$lon <- c(-119.9663, -118.9045,
+                      -121.2789, -121.5950,
+                      -124.2030, -122.0309,
+                      -122.2361, -123.4307,
+                      -122.1685, -114.1232,
+                      -116.9325, -116.0542,
+                      -119.2945)
+
+####MW####
+mw_cities_df <- data.frame(mw_cities)
+mw_cities_df$rownum <- c(seq(from = 1, to = 7, by = 1))
+mw_cities_df <- mw_cities_df[match(mw_tour_order, mw_cities_df$rownum),]
+mw_cities_df$label <- c("1 - Hot Springs National Park", "2 - Cuyahoga Valley National Park",
+                        "3 - Isle Royale National Park", "4 - Voyageurs National Park",
+                        "5 - Theodore Roosevelt National Park", "6 - Badlands National Park",
+                        "7 - Wind Cave National Park")
+mw_cities_df$label2 <- c("1","2","3","4","5","6","7")
+mw_cities_df$lat <- c(34.5037, 
+                      41.3198, 
+                      47.1211, 
+                      48.6023, 
+                      46.9139,
+                      43.7269,
+                      43.4316)
+mw_cities_df$lon <- c(-93.0552, -81.6268, -88.5694,
+                      -93.4041, -103.5244,
+                       -101.9840,
+                      -103.4744)
+
+all_parks <- data.frame(park = c(
+  "Great Sand Dunes", "Capitol Reef", 
+  "Mesa Verde", "Badlands",
+  "Canyonlands", "Dry Tortugas",
+  "Bryce Canyon", "Everglades",
+  "Black Canyon of the Gunnison", "Arches", 
+  "Grand Canyon", "Petrified Forest",
+  "Mount Rainier", "Zion",
+  "Carlsbad Caverns", "Great Basin",
+  "Channel Islands", "Death Valley", 
+  "Redwood", "Yosemite",
+  "Kings Canyon", "Sequoia",
+  "Lassen Volcanic", "Pinnacles",
+  "Crater Lake", "Joshua Tree",
+  "Saguaro", "Wind Cave",
+  "Big Bend", "Theodore Roosevelt",
+  "Yellowstone", "Grand Teton",
+  "Glacier", "North Cascades",
+  "Olympic", "Mammoth Cave",
+  "Great Smoky Mountains", "Cuyahoga Valley",
+  "Shenandoah", "Gateway Arch", 
+  "Hot Springs", "Congaree",
+  "Guadalupe Mountains", "Biscayne",
+  "Rocky Mountain", "Isle Royale",
+  "Voyageurs", "Acadia" ),
+  lat = c(37.7916, 38.3670,
+          37.2309, 43.7269,
+          38.3269, 24.6285,
+          37.5930, 25.2866,
+          38.5754, 38.7331,
+          36.1070, 34.9100,
+          46.8800, 37.2982,
+          32.1479, 38.9833,
+          33.9961, 36.5054,
+          41.2132, 37.8651,
+          36.8879, 36.4864,
+          40.4977, 36.4906,
+          42.8684, 33.8734,
+          32.2967, 43.6046,
+          29.1275, 46.9790,
+          44.4280, 43.7904,
+          48.7596, 48.7718,
+          47.8021, 37.1870,
+          35.6118, 41.2808,
+          38.2928, 38.6247,
+          34.5217, 33.7871,
+          31.9452, 25.4824,
+          40.3428, 47.9959,
+          48.4841, 44.3386),
+  lon = c(-105.5943, -111.2615,
+          -108.4618, -101.9840,
+          -109.8783, -82.8732,
+          -112.1871, -80.8987,
+          -107.7416, -109.5925,
+          -112.1130, -109.8068,
+          -121.7269, -113.0263,
+          -104.5567, -114.3000,
+          -119.7692, -117.0794,
+          -124.0046, -119.5383,
+          -118.5551, -118.5658,
+          -121.4207, -121.1825,
+          -122.1685, -115.9010,
+          -111.1666, -103.4213,
+          -103.2425, -103.5387,
+          -110.5885, -110.6818,
+          -113.7870, -121.2985,
+          -123.6044, -86.1005,
+          -83.4895, -81.5678,
+          -78.6796, -90.1854,
+          -93.0424, -80.7424,
+          -104.8725, -80.2083,
+          -105.6836, -88.9093,
+          -92.8271, -68.2733))
+all_parks$label <- seq(from = 1, to = 48, by = 1)
+all_parks$label <- as.character(all_parks$label)
+
+#Plot MW
+library(ggplot2)
+library(maps)
+all_states <- map_data("state")
+states_mw <- subset(all_states, region %in% c( "illinois", "indiana", "iowa", "michigan", "minnesota","missouri", "north dakota", "ohio", "south dakota", "wisconsin", "arkansas", "nebraska", "kansas" ) )
+p <- ggplot()
+p_mw <- p + geom_polygon(data=states_mw, aes(x=long, y=lat, group = group),colour="white", fill="#56B4E9" ) + theme(panel.grid = element_blank(), panel.background = element_blank(), axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank())
+p_mw + geom_point(data = mw_cities_df, aes(x=lon, y=lat)) +
+  geom_text(data = mw_cities_df, hjust=0.5, vjust=-0.5, aes(x=lon, y=lat, label=label2), colour="black", size=4 )
+
+
+#Plot PW
+states_pw <- subset(all_states, region %in% c("washington", "oregon", "idaho", "california", "nevada") )
+p_pw <- p + geom_polygon(data=states_pw, aes(x=long, y=lat, group = group),colour="white", fill="#D55E00" ) + theme(panel.grid = element_blank(), panel.background = element_blank(), axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank())
+p_pw + geom_point(data = pw_cities_df, aes(x=lon, y=lat)) +
+  geom_text(data = pw_cities_df, hjust=0.5, vjust=-0.5, aes(x=lon, y=lat, label=label2), colour="black", size=4 )
+
+
+#Plot NE
+states_ne <- subset(all_states, region %in% c("maine", "new hampshire", "vermont", "rhode island", "new jersey", "new york", "pennsylvania", "virginia", "west virginia", "delaware", "connecticut", "maryland", "massachusetts", "washington d.c.") )
+p_ne <- p + geom_polygon(data = states_ne, aes(x=long, y=lat, group = group),colour="white", fill="#009E73" ) + theme(panel.grid = element_blank(), panel.background = element_blank(), axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank())
+p_ne + geom_point(data = ne_cities_df, aes(x=lon, y=lat)) +
+  geom_text(data = ne_cities_df, hjust=0.5, vjust=-0.5, aes(x=lon, y=lat, label=label), colour="black", size=5)
+
+#Plot SE
+states_se <- subset(all_states, region %in% c("kentucky", "tennessee", "north carolina", "south carolina", "georgia", "alabama", "louisiana", "florida", "mississippi") )
+p_se <- p + geom_polygon(data=states_se, aes(x=long, y=lat, group = group),colour="white", fill="#E69F00" ) + theme(panel.grid = element_blank(), panel.background = element_blank(), axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank())
+p_se + geom_point(data = se_cities_df, aes(x=lon, y=lat)) +
+  geom_text(data = se_cities_df, hjust=0.5, vjust=-0.5, aes(x=lon, y=lat, label=label2), colour="black", size=3)
+
+
+#Plot IM
+states_im <- subset(all_states, region %in% c("montana", "wyoming", "colorado", "utah", "new mexico", "arizona", "texas", "oklahoma") )
+p_im <- p + geom_polygon(data=states_im, aes(x=long, y=lat, group = group),colour="white", fill="#999999" ) + theme(panel.grid = element_blank(), panel.background = element_blank(), axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank())
+p_im + geom_point(data = im_cities_df, aes(x=lon, y=lat)) +
+  geom_text(data = im_cities_df, hjust=0.5, vjust=-0.5, aes(x=lon, y=lat, label=label2), colour="black", size=4)
+
+#All States
+p <- p + geom_polygon(data=all_states, aes(x=long, y=lat, group = group),colour="white", fill="palegreen3" )
+p  + theme(panel.grid = element_blank(), panel.background = element_blank(), axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank()) +
+  geom_point(data = all_parks, aes(x=lon, y=lat)) +
+  geom_text(data = all_parks, hjust=0.5, vjust=-0.5, aes(x=lon, y=lat, label=label), colour="black", size=3)
+
